@@ -1,0 +1,50 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+@section Scripts {
+    <script>
+        $(function () {
+            // sivun alustus
+            console.log("Sivun alustus.");
+            $("#search").keypress((event) => {
+                if (event.which == 32 && $("#search").val().length > 3) {
+                    $("#results").empty();
+                    $.getJSON("/Home/searchResults?searchTerm=" + $("#search").val().trim(), (result) => {
+                        $.each(result, (i, field) => {
+                            $("#results").append("<h3>" + field["Title"] + "</h3><p>" + field["Description"] + "</p>");
+                        });
+                    });
+                }
+            });
+        });
+    </script>
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    @if (ViewBag.apikey == null || ViewBag.apikey == "")
+    {
+        <form>
+            <input type="text" name="apikey" value="" />
+            <input type="submit" />
+
+        </form>
+    }
+    else
+    {
+        <div class="container">
+            <input type="text" id="search" name="search" value="" />
+            <input type="button" id="asd" value="asd" />
+
+            <div class="row" id="results">
+                @*foreach (bootdemo.Models.Team team in Model)
+                    {
+                        <div class="col">@team.teamName</div>
+                    }*@
+
+            </div>
+            <p id="reslist"></p>
+        </div>
+    }
+</div>
