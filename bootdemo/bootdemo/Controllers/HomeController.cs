@@ -37,7 +37,6 @@ namespace bootdemo.Controllers
             string sql = null;
             SqlDataReader dataReader;
 
-        //    connectionString = "Server= localhost\\sqlexpress; Database= NHLTeams; Integrated Security = True; MultipleActiveResultSets=true ";
             connectionString = "Server= localhost\\sqlexpress; Database= News; Trusted_Connection = True; MultipleActiveResultSets=true ";
 
             ViewBag.apikey = apikey;
@@ -49,7 +48,6 @@ namespace bootdemo.Controllers
             }
             catch (Exception ex)
             {
-                // Create NHLTeams database
                 connectionString = "Server = localhost\\sqlexpress; Trusted_Connection = True; MultipleActiveResultSets=true";
                 connection = new SqlConnection(connectionString);
                 connection.Open();
@@ -58,8 +56,6 @@ namespace bootdemo.Controllers
                 sql = "CREATE DATABASE News";
                 command = new SqlCommand(sql, connection);
                 command.ExecuteNonQuery();
-
-                //    CONSTRAINT UC_article UNIQUE(ID, url)
 
                 try
                 {
@@ -83,7 +79,11 @@ namespace bootdemo.Controllers
                     return View();
 
                 }
-                sql = "CREATE TABLE News(ID int NOT NULL, Title varchar(255), Author varchar(255), Description TEXT, Url TEXT NOT NULL, UrlToImage TEXT, PublishedAt DATETIME)";
+                sql = "CREATE TABLE Newslist(ID int NOT NULL, Title varchar(255), Author varchar(255), Description TEXT, Url TEXT NOT NULL, UrlToImage TEXT, PublishedAt DATETIME)";
+                command = new SqlCommand(sql, connection);
+                command.ExecuteNonQuery();
+
+                sql = "CREATE TABLE Words(ID int NOT NULL, Words varchar(255))";
                 command = new SqlCommand(sql, connection);
                 command.ExecuteNonQuery();
 
@@ -105,12 +105,6 @@ namespace bootdemo.Controllers
                     command.ExecuteNonQuery();
                 }
 
-                sql = "SELECT * FROM TeamInfo";
-
-                
-
-            //    TeamList team = getJSONFeed(ViewBag.apikey);
-
                 return View();
             }
             catch
@@ -131,9 +125,6 @@ namespace bootdemo.Controllers
                 }
                     
             }
-            //(string)dataReader.GetValue(0);
-
-         //List<Team> teams = new List<Team>();
 
             return View();
 
@@ -150,13 +141,6 @@ namespace bootdemo.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
-        /*
-        public IActionResult UusiSivu()
-        {
-            return View();
-        }
-        */
-       
 
         [HttpGet]
         public string searchResults(string searchTerm)
@@ -178,33 +162,45 @@ namespace bootdemo.Controllers
             connection.Open();
             try
             {
-                sql = "SELECT * FROM News WHERE Description LIKE '%" + searchTerm + "%'";
+                sql = "SELECT * FROM Newslist WHERE Description LIKE '%" + searchTerm + "%'";
                 command = new SqlCommand(sql, connection);
                 dataReader = command.ExecuteReader();
-
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 return ex.Message;
             }
             //No results
             if (!dataReader.Read())
             {
-                
-                var newsApiClient = new NewsApiClient("a559cff68e4f4696b817a10b8f15be5d");
+                sql = "SELECT apikey FROM connectionInfo";
+                command = new SqlCommand(sql, connection);
+                dataReader = command.ExecuteReader();
+                dataReader.Read();
+                ViewBag.apikey = (string)dataReader.GetValue(0);
+
+                var newsApiClient = new NewsApiClient(ViewBag.apikey);
+
+                DateTime curdate = DateTime.Now;
+                curdate = curdate.AddDays(-30);
+
                 var articlesResponse = newsApiClient.GetEverything(new EverythingRequest
                 {
                     Q = searchTerm,
                     SortBy = SortBys.Popularity,
                     Language = Languages.EN,
-                    From = new DateTime(2020, 3, 12)
+                    From = new DateTime(curdate.Year, curdate.Month, curdate.Day)
                 });
 
                 if (articlesResponse.Status == Statuses.Ok)
                 {
+                    Debug.WriteLine("OK1");
                     // total results found
                     Console.WriteLine(articlesResponse.TotalResults);
                     // here's the first 20
                     var dt = new DataTable();
+                    var Unique_words = new DataTable();
+
                     dt.Columns.Add("ID");
                     dt.Columns.Add("Title");
                     dt.Columns.Add("Author");
@@ -213,69 +209,93 @@ namespace bootdemo.Controllers
                     dt.Columns.Add("UrlToImage");
                     dt.Columns.Add("PublishedAt");
 
-                    int id = 0;
+                    Unique_words.Columns.Add("ID");
+                    Unique_words.Columns.Add("Words");
+
+                    int id = 0, w_id = 0;
+                    string[] nowords = { "a", "the", "an", "I", "my", "mine", "me", "your", "yours", "you", "he", "his", "his", "him", "she", "her", "hers", "her", "it", "its", "its", "it", "we", "our", "ours", "us", "they", "their", "theirs", "them" };
                     foreach (var article in articlesResponse.Articles)
                     {
+                        var words = new HashSet<string>(article.Description.Split(' '));
+
+                        //    List<string> Unique_words = new List<string>();
+                        foreach (string s in words)
+                        {
+                            bool ignore = false;
+                            foreach (string noword in nowords)
+                            {
+                                if (s == noword)
+                                {
+                                    ignore = true;
+                                    break;
+                                }
+                            }
+                            if (!ignore)
+                            {
+                                Unique_words.Rows.Add(w_id++, s);
+                            }
+                        }
+
                         dt.Rows.Add(id++, article.Title, article.Author, article.Description, article.Url, article.UrlToImage, article.PublishedAt);
                     }
 
                     using (var sqlBulk = new SqlBulkCopy(connectionString))
                     {
-                        sqlBulk.DestinationTableName = "News";
+                        sqlBulk.DestinationTableName = "Newslist";
                         sqlBulk.WriteToServer(dt);
+                        sqlBulk.DestinationTableName = "Words";
+                        sqlBulk.WriteToServer(Unique_words);
                     }
-                    /*
-                    sql = Uri.EscapeDataString("INSERT INTO News (Title, Author, Description, Url, UrlToImage, PublishedAt) VALUES ('" + article.Title + "', '" + article.Author + "', '" + article.Description + "', '" + article.Url + "', '" + article.UrlToImage + "', '" + article.PublishedAt + "')");
-                        Debug.WriteLine("SQL: " + sql);
-                        command = new SqlCommand(sql, connection);
-                        command.ExecuteNonQuery();
-                    */
 
                     try
                     {
-                        sql = "SELECT * FROM News WHERE Description LIKE '%" + searchTerm + "%'";
+                        sql = "SELECT * FROM Newslist WHERE Description LIKE '%" + searchTerm + "%'";
                         command = new SqlCommand(sql, connection);
                         dataReader = command.ExecuteReader();
-
+                        dataReader.Read();
                     }
                     catch (Exception ex)
                     {
                         return JsonConvert.SerializeObject(ex.Message);
                     }
+                } else
+                {
+                    return articlesResponse.Error.Message;
                 }
             }
 
-
             List<News> Rows = new List<News>();
-        //    List<Object> Rows = new List<Object>();
             Object[] values = new Object[dataReader.FieldCount];
-            Object rows;
-            NewsObject newss;
-            
-            while (dataReader.Read())
+            do
             {
-                int fc = dataReader.GetValues(values);
-                
-                News row = new News();
-                row.ID = (int)values[0]; // (int)dataReader.GetValue(0);
-                row.Title = (string)values[1];// (string)dataReader.GetValue(1);
-                row.Author = (string)values[2];// (string)dataReader.GetValue(2);
-                row.Description = (string)values[3];// (string)dataReader.GetValue(3);
-                row.Url = (string)values[4];//  (string)dataReader.GetValue(4);
-                row.UrlToImage = (string)values[5]; // (string)dataReader.GetValue(5);
-                row.PublishedAt = (DateTime)values[6];// (DateTime)dataReader.GetValue(6);
-                
-                //    dataReader.Ne
-            //    row = (News[])values;
-                Rows.Add(row);
 
-            }
+                int fc;
+                try
+                {
+                    fc = dataReader.GetValues(values);
+                }
+                catch
+                {
+                    break;
+                }
+
+                if (fc > 0)
+                {
+                    News row = new News();
+                    row.ID = (int)values[0];
+                    row.Title = (string)values[1];
+                    row.Author = (string)values[2];
+                    row.Description = (string)values[3];
+                    row.Url = (string)values[4];
+                    row.UrlToImage = (string)values[5];
+                    row.PublishedAt = (DateTime)values[6];
+                    Debug.WriteLine("title: "+row.Title);
+                    Rows.Add(row);
+                } 
+            } while (dataReader.Read());
+
             connection.Close();
-
-            Debug.WriteLine(Rows[0].ID);
-            Debug.WriteLine(Rows[1].ID);
-            Debug.WriteLine(Rows[2].ID);
-
+            Debug.WriteLine(Rows);
             return JsonConvert.SerializeObject(Rows);
 
             }
@@ -284,28 +304,6 @@ namespace bootdemo.Controllers
         {
 
             return View();
-
-
-            // If NHLTeams-database not found, create one.
-            /*
-                sql = "CREATE DATABASE NHLTeams";
-                command = new SqlCommand(sql, connection);
-                */
-            
-            /*
-            sql = "SELECT * FROM Customers";
-
-            try
-            {
-                connection.Open();
-                command = new SqlCommand(sql, connection);
-                dataReader = command.ExecuteReader();
-                dataReader.Read();
-                return (string)dataReader.GetValue(0);
-            } catch (Exception ex) {
-                return ex.Message;
-            }
-            */
 
         }
         
