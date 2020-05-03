@@ -30,11 +30,29 @@
 
         }
 
+        function renderWords(i, field) {
+            return `
+                <div class="col">
+                    `+field+`
+                </div>
+            `;
+        }
+
         function searchForResults() {
             $("#results").empty();
             $.getJSON("/Home/searchResults?searchTerm=" + $("#search").val().trim(), (result) => {
                 $.each(result, (i, field) => {
                     $("#results").append(renderResult(field));
+                });
+            }).done(() => searchForWords());
+        }
+
+        function searchForWords() {
+            $("#words").empty();
+            console.log($("#search").val().trim());
+            $.getJSON("/Home/searchWord/" + $("#search").val().trim(), (result) => {
+                $.each(result, (i, field) => {
+                    $("#words").append(renderWords(i, field));
                 });
             });
         }
@@ -54,18 +72,17 @@
     }
     else
     {
-        <div class="container">
-            <input type="text" id="search" name="search" value="" />
-            <input type="button" id="asd" value="asd" />
+<div class="container">
+    <input type="text" id="search" name="search" value="" />
 
-            <div class="row" id="results">
-                @*foreach (bootdemo.Models.Team team in Model)
-                    {
-                        <div class="col">@team.teamName</div>
-                    }*@
+    <div class="row" id="words">
 
-            </div>
-            <p id="reslist"></p>
-        </div>
+    </div>
+
+    <div class="row" id="results">
+
+    </div>
+    <p id="reslist"></p>
+</div>
     }
 </div>

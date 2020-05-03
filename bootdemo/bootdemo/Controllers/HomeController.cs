@@ -145,13 +145,13 @@ namespace bootdemo.Controllers
         [HttpGet]
         public string searchResults(string searchTerm)
         {
-            /*
+            
             if (Request.Headers["X-Requested-With"] != "XMLHttpRequest")
             {
                 Response.StatusCode = 403;
                 return Response.StatusCode.ToString();
             }
-            */
+            
             SqlConnection connection;
             SqlCommand command;
             string sql = null;
@@ -194,8 +194,6 @@ namespace bootdemo.Controllers
 
                 if (articlesResponse.Status == Statuses.Ok)
                 {
-                    Debug.WriteLine("OK1");
-                    // total results found
                     Console.WriteLine(articlesResponse.TotalResults);
                     // here's the first 20
                     var dt = new DataTable();
@@ -213,12 +211,18 @@ namespace bootdemo.Controllers
                     Unique_words.Columns.Add("Words");
 
                     int id = 0, w_id = 0;
-                    string[] nowords = { "a", "the", "an", "I", "my", "mine", "me", "your", "yours", "you", "he", "his", "his", "him", "she", "her", "hers", "her", "it", "its", "its", "it", "we", "our", "ours", "us", "they", "their", "theirs", "them" };
+                    string[] nowords = { "a", "the", "an", "i", "my", "mine", "me", "your", "yours", "you", "he", "his", "his", "him", "she", "her", "hers", "her", "it", "its", "its", "it", "we", "our", "ours", "us", "they", "their", "theirs", "them" };
                     foreach (var article in articlesResponse.Articles)
                     {
-                        var words = new HashSet<string>(article.Description.Split(' '));
+
+                        string description = article.Description.
+                            Trim('.', ',', ':', ';', '?', '!').
+                            ToLower();
+
+                        var words = new HashSet<string>(description.Split(' '));
 
                         //    List<string> Unique_words = new List<string>();
+                       
                         foreach (string s in words)
                         {
                             bool ignore = false;
@@ -289,16 +293,51 @@ namespace bootdemo.Controllers
                     row.Url = (string)values[4];
                     row.UrlToImage = (string)values[5];
                     row.PublishedAt = (DateTime)values[6];
-                    Debug.WriteLine("title: "+row.Title);
                     Rows.Add(row);
                 } 
             } while (dataReader.Read());
 
             connection.Close();
-            Debug.WriteLine(Rows);
             return JsonConvert.SerializeObject(Rows);
 
+        }
+
+        public string searchWord(string id)
+        {
+            /*
+            if (Request.Headers["X-Requested-With"] != "XMLHttpRequest")
+            {
+                Response.StatusCode = 403;
+                return Response.StatusCode.ToString();
             }
+            */
+            SqlConnection connection;
+            SqlCommand command;
+            string sql = null;
+            SqlDataReader dataReader;
+
+            string connectionString = "Server= localhost\\sqlexpress; Database= News; Integrated Security = True; MultipleActiveResultSets=true ";
+            connection = new SqlConnection(connectionString);
+            connection.Open();
+
+            sql = "SELECT * FROM Words WHERE Words LIKE '"+id+"%'";
+            command = new SqlCommand(sql, connection);
+            dataReader = command.ExecuteReader();
+
+            List<string> Words = new List<string>();
+
+            string word = null;
+            while (dataReader.Read()) {
+
+                word = (string)dataReader.GetValue(1);
+
+                Words.Add(word);
+            }
+
+            connection.Close();
+            return JsonConvert.SerializeObject(new HashSet<string>(Words));
+
+        }
 
             public IActionResult UusiSivu()
         {
