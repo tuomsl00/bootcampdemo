@@ -1,1 +1,2 @@
 # bootdemo
+Requires SQL Server.
