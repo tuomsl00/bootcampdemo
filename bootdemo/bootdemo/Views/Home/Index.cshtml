@@ -3,59 +3,7 @@
 }
 @section Scripts {
     <script>
-        var k;
-        $(function () {
-            $("#search").keypress((event) => {
-                if (event.which == 32 && $("#search").val().length > 3) {
-                    searchForResults();
-                }
-                clearTimeout(k);
-                if (event.which != 32) {
-                    k = setTimeout(() => searchForResults(), 2000);
-                }
-            });
-        });
 
-
-        function renderResult(field) {
-
-            return `
-                <div class="col-sm-12">
-                <h4>`+ field["Title"] +`</h4>
-                <p>`+ field["Description"] +`</p>
-                <a href="`+ field["Url"] + `">` + field["Url"] +`</a>
-                <p><small>Author: `+field["Author"]+` at `+field["PublishedAt"]+`</small></p>
-                </div>
-            `;
-
-        }
-
-        function renderWords(i, field) {
-            return `
-                <div class="col">
-                    `+field+`
-                </div>
-            `;
-        }
-
-        function searchForResults() {
-            $("#results").empty();
-            $.getJSON("/Home/searchResults?searchTerm=" + $("#search").val().trim(), (result) => {
-                $.each(result, (i, field) => {
-                    $("#results").append(renderResult(field));
-                });
-            }).done(() => searchForWords());
-        }
-
-        function searchForWords() {
-            $("#words").empty();
-            console.log($("#search").val().trim());
-            $.getJSON("/Home/searchWord/" + $("#search").val().trim(), (result) => {
-                $.each(result, (i, field) => {
-                    $("#words").append(renderWords(i, field));
-                });
-            });
-        }
     </script>
 }
 
@@ -65,7 +13,7 @@
     {
         <form>
             <input type="text" name="apikey" value="" />
-            <input type="submit" />
+            <input type="submit" value="Set apikey" />
 
         </form>
     }

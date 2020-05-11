@@ -15,6 +15,7 @@ using NewsAPI;
 using NewsAPI.Models;
 using NewsAPI.Constants;
 using System.Data;
+using System.Globalization;
 
 namespace bootdemo.Controllers
 {
@@ -143,15 +144,23 @@ namespace bootdemo.Controllers
         }
 
         [HttpGet]
-        public string searchResults(string searchTerm)
+        public string searchResults(string searchTerm, DateTime date)
         {
-            
+            //            Debug.WriteLine(DateTime.ParseExact(date.ToString(), "dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture).ToString("yyyy-MM-dd"));
+
             if (Request.Headers["X-Requested-With"] != "XMLHttpRequest")
             {
                 Response.StatusCode = 403;
                 return Response.StatusCode.ToString();
             }
-            
+
+            Debug.WriteLine(Convert.ToDateTime(date.ToString()).ToString("yyyy-MM-ddTHH:mm:ss"));
+            string latestDate = Convert.ToDateTime(date.ToString()).ToString("yyyy-MM-ddTHH:mm:ss");
+            DateTime thisdate = DateTime.Now;
+            int daysToPast = (int)(thisdate - date).TotalDays;
+            if (daysToPast > 30) daysToPast = 30;
+
+
             SqlConnection connection;
             SqlCommand command;
             string sql = null;
@@ -162,7 +171,9 @@ namespace bootdemo.Controllers
             connection.Open();
             try
             {
-                sql = "SELECT * FROM Newslist WHERE Description LIKE '%" + searchTerm + "%'";
+                //
+                sql = "SELECT * FROM Newslist WHERE Description LIKE '%" + searchTerm + "%'" + ((date.TimeOfDay == TimeSpan.Zero) ? "" : " AND PublishedAt > '" + latestDate + "'");
+                Debug.WriteLine(sql);
                 command = new SqlCommand(sql, connection);
                 dataReader = command.ExecuteReader();
             }
@@ -171,8 +182,10 @@ namespace bootdemo.Controllers
                 return ex.Message;
             }
             //No results
+            Debug.WriteLine("1: "+sql);
             if (!dataReader.Read())
             {
+                Debug.WriteLine("2: "+sql);
                 sql = "SELECT apikey FROM connectionInfo";
                 command = new SqlCommand(sql, connection);
                 dataReader = command.ExecuteReader();
@@ -182,7 +195,7 @@ namespace bootdemo.Controllers
                 var newsApiClient = new NewsApiClient(ViewBag.apikey);
 
                 DateTime curdate = DateTime.Now;
-                curdate = curdate.AddDays(-30);
+                curdate = curdate.AddDays(-daysToPast);
 
                 var articlesResponse = newsApiClient.GetEverything(new EverythingRequest
                 {
