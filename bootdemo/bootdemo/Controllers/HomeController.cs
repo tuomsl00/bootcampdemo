@@ -146,7 +146,6 @@ namespace bootdemo.Controllers
         [HttpGet]
         public string searchResults(string searchTerm, DateTime date)
         {
-            //            Debug.WriteLine(DateTime.ParseExact(date.ToString(), "dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture).ToString("yyyy-MM-dd"));
 
             if (Request.Headers["X-Requested-With"] != "XMLHttpRequest")
             {
@@ -154,7 +153,6 @@ namespace bootdemo.Controllers
                 return Response.StatusCode.ToString();
             }
 
-            Debug.WriteLine(Convert.ToDateTime(date.ToString()).ToString("yyyy-MM-ddTHH:mm:ss"));
             string latestDate = Convert.ToDateTime(date.ToString()).ToString("yyyy-MM-ddTHH:mm:ss");
             DateTime thisdate = DateTime.Now;
             int daysToPast = (int)(thisdate - date).TotalDays;
@@ -182,10 +180,8 @@ namespace bootdemo.Controllers
                 return ex.Message;
             }
             //No results
-            Debug.WriteLine("1: "+sql);
             if (!dataReader.Read())
             {
-                Debug.WriteLine("2: "+sql);
                 sql = "SELECT apikey FROM connectionInfo";
                 command = new SqlCommand(sql, connection);
                 dataReader = command.ExecuteReader();
@@ -227,15 +223,13 @@ namespace bootdemo.Controllers
                     string[] nowords = { "a", "the", "an", "i", "my", "mine", "me", "your", "yours", "you", "he", "his", "his", "him", "she", "her", "hers", "her", "it", "its", "its", "it", "we", "our", "ours", "us", "they", "their", "theirs", "them" };
                     foreach (var article in articlesResponse.Articles)
                     {
-
+                        
                         string description = article.Description.
                             Trim('.', ',', ':', ';', '?', '!').
                             ToLower();
 
                         var words = new HashSet<string>(description.Split(' '));
-
-                        //    List<string> Unique_words = new List<string>();
-                       
+                        // Delete pronomins and make unique word -list
                         foreach (string s in words)
                         {
                             bool ignore = false;
@@ -317,13 +311,13 @@ namespace bootdemo.Controllers
 
         public string searchWord(string id)
         {
-            /*
+            
             if (Request.Headers["X-Requested-With"] != "XMLHttpRequest")
             {
                 Response.StatusCode = 403;
                 return Response.StatusCode.ToString();
             }
-            */
+            
             SqlConnection connection;
             SqlCommand command;
             string sql = null;

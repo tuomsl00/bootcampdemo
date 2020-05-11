@@ -59,7 +59,7 @@ function searchForResultsNoCache(latestDate) {
     }).done(() => searchForWords()).
         fail(function (jqxhr, textStatus, error) {
             var err = textStatus + ", " + error;
-            alert("error: " + jqxhr);
+            alert("error: " + err);
     });
     
 }
